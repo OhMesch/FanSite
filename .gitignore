@@ -1,0 +1,6 @@
+flask_config.py
+ServerLog.txt
+ShadowBanned.txt    
+
+env/*
+uploads/*
