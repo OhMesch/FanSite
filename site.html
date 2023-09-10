@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Photo Gallery</title>
+
+    <script src="https://unpkg.com/imagesloaded@5/imagesloaded.pkgd.js"></script>
+    <script src="https://unpkg.com/packery@2/dist/packery.pkgd.js"></script>
 </head>
 <body>
     <div id="header">
@@ -16,11 +19,13 @@
         <button onclick="uploadImage()">Upload</button>
     </div>
 
-    <div id="gallery"></div>
+    <div id="gallery">
+        <div class="grid-sizer"></div>
+    </div>
 
     <style>
         body {
-            background-image: url('./static/imgs/background1.jpg');
+            background-image: url('./static/imgs/background.jpg');
             background-size: 2%;
             background-repeat: repeat;
             margin: 0;
@@ -57,18 +62,22 @@
             background-color: aqua;
         }
         #gallery {
-            display: flex; 
-            flex-wrap: wrap;
-            justify-content: space-around;
-            gap: 16px;
-        }
-        #gallery img {
-            flex: 1;
-            /* object-fit: cover; */
-            max-width: calc(33.3% - 16px);
-            /* max-height: calc(33.3% - 16px); */
-            height: auto;
             margin: 0 auto;
+            text-align: center;
+        }
+        .grid-sizer,
+        .grid-item { 
+            width: calc(25%);
+            padding: .5%;
+            margin: 0 auto;
+            vertical-align: middle;
+        }
+        .grid-item-portrait {
+            /* height: 60vh;
+            width: auto; */
+        }
+        .grid-item-landscape {
+            width: calc(25%*16/9);
         }
         @font-face {
             font-family: 'SuperMario256';
@@ -85,16 +94,22 @@
     </style>
 
     <script>
+        let pckry = new Packery( document.getElementById('gallery'), {
+            itemSelector: '.grid-item',
+            columnWidth: '.grid-sizer',
+            percentPosition: true
+        });
         window.onload = function() {
             fetch('/get-images')
             .then(response => response.json())
             .then(images => {
                 let gallery = document.getElementById('gallery');
                 for (let image of images) {
-                    let img = document.createElement('img');
-                    img.src = `/uploads/${image}`;
-                    gallery.appendChild(img);
+                    gallery.appendChild(createImgElement(`/uploads/${image}`));
                 }
+                imagesLoaded(gallery).progress( function() {
+                    pckry.layout();
+                });
             });
 
             assignUserCookieIfNone();
@@ -123,13 +138,30 @@
             .then(response => response.json())
             .then(data => {
                 if(data.success) {
-                    let gallery = document.getElementById('gallery');
-                    let img = document.createElement('img');
-                    img.src = `/uploads/${file.name}`;
-                    gallery.appendChild(img);
+                    const gallery = document.getElementById('gallery');
+                    const upload = createImgElement(`/uploads/${file.name}`);
+                    const fragment = document.createDocumentFragment();
+                    fragment.appendChild(upload);
+                    gallery.insertBefore(fragment, gallery.firstElementChild.nextSibling);
+                    pckry.prepended(fragment);
+                    pckry.layout();
                     log(`${getUserCookie()} uploaded ${file.name}`);
                 }
             });
+        }
+
+        function createImgElement(src) {
+            let img = new Image();
+            img.onload = function() {
+                this.classList = 'grid-item';
+                if (this.height > this.width) {
+                    this.classList += ' grid-item-portrait';
+                } else {
+                    this.classList += ' grid-item-landscape';
+                }
+            }
+            img.src = src;
+            return img;
         }
 
         function log(logMessage) {
