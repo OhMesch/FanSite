@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+    <head>
+      <title>Prove Yourself</title>
+    </head>
+    <body>
+        <h1>
+            Ạ̵̚͝D̷̗̺̍̓O̸̠̿̕R̵̡̥͐Ę̷̇̕ ̷̺̭́H̸̡̫͛̒İ̸̮̅M̵͙̯͆
+        </h1>
+        <form action="" method="post" novalidate>
+            {{ form.hidden_tag() }}
+            <p>
+                {{ form.password(size=32, autofocus=true) }}
+            </p>
+            <!-- <p>{{ form.submit() }}</p> -->
+        </form>
+        <style>
+            body {
+                background-image: url('./static/imgs/background.jpg');
+                background-size: 2%;
+                background-repeat: repeat;
+                margin: 0;
+            }
+            h1 {
+                font-size: 550%;
+                margin-left: 3%;
+                color: gold;
+            }
+            form {
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%, -50%);
+                transform: translate(-50%, -50%);
+            }
+        </style>
+    </body>
+</html>

@@ -1,4 +1,6 @@
 flask_config.py
+banned.txt
+server.log
 ServerLog.txt
 ShadowBanned.txt    
 
