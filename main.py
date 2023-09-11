@@ -20,9 +20,9 @@ import os
 
 app = Flask(__name__)
 app.config.from_pyfile("flask_config.py")
-
-login = LoginManager(app)
-login.login_view = 'login'
+LOG_FILE = app.config['LOG_FILE'] or 'server.log'
+UPLOAD_FOLDER = app.config['UPLOAD_FOLDER'] or 'uploads'
+BANNED_FILE = app.config['SHADOW_BAN_FILE'] or 'banned.txt'
 
 class User(UserMixin):
     id = 'fan'
@@ -39,6 +39,8 @@ class LoginForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Adore Him')
 
+login = LoginManager(app)
+login.login_view = 'login'
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -54,7 +56,7 @@ def login():
             log('Login Failed')
             return redirect(url_for('login'))
             
-    return render_template('login.html', title='Sign In', form=form)
+    return render_template('login.html', form=form)
 
 @app.route('/')
 @app.route('/index')
@@ -77,7 +79,7 @@ def upload_file():
         log(f"Denied file upload request from {request.form['uuid']}. Reason: 'No selected file'.")
         return jsonify({"error": "No selected file"})
     if file:
-        filename = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        filename = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(filename)
         log(f"Accepted file upload request from {request.form['uuid']} for file {filename}.")
         return jsonify({"success": True})  
@@ -85,13 +87,13 @@ def upload_file():
 @app.route('/uploads/<filename>')
 @login_required
 def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    return send_from_directory(UPLOAD_FOLDER, filename)
 
 @app.route('/get-images')
 @login_required
 def get_images():
     # List all files in the UPLOAD_FOLDER
-    files = [f for f in os.listdir(app.config['UPLOAD_FOLDER']) if os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'], f))]
+    files = [f for f in os.listdir(UPLOAD_FOLDER) if os.path.isfile(os.path.join(UPLOAD_FOLDER, f))]
     return jsonify(files)
 
 @app.route('/log', methods=['POST'])
@@ -105,13 +107,13 @@ def log_data():
         return jsonify({"error": "No message"})
 
 def log(message):
-    with(open(app.config['LOG_FILE'], 'a+')) as f:
+    with(open(LOG_FILE, 'a+')) as f:
         f.write(f'{datetime.now().strftime("%m/%d/%Y %H:%M:%S")}: {message}\n')
 
 def isBanned(uuid):
-    if not os.path.exists(app.config['SHADOW_BAN_FILE']):
+    if not os.path.exists(BANNED_FILE):
         return False
-    with(open(app.config['SHADOW_BAN_FILE'], 'r')) as f:
+    with(open(BANNED_FILE, 'r')) as f:
         for line in f:
             if uuid in line:
                 return True
@@ -120,16 +122,16 @@ def isBanned(uuid):
 if __name__ == '__main__':
     log("Starting server...")
     
-    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-        os.makedirs(app.config['UPLOAD_FOLDER'])
-        log(f"Created upload folder '{app.config['UPLOAD_FOLDER']}'")
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER)
+        log(f"Created upload folder '{UPLOAD_FOLDER}'")
     else:
-        log(f"Using existing upload folder '{app.config['UPLOAD_FOLDER']}'")
+        log(f"Using existing upload folder '{UPLOAD_FOLDER}'")
 
-    if not os.path.exists(app.config['SHADOW_BAN_FILE']):
-        with(open(app.config['SHADOW_BAN_FILE'], 'w+')) as f:
+    if not os.path.exists(BANNED_FILE):
+        with(open(BANNED_FILE, 'w+')) as f:
             f.write('')
-        log(f"Created shadow ban file '{app.config['SHADOW_BAN_FILE']}'")
+        log(f"Created shadow ban file '{BANNED_FILE}'")
     else:
-        log(f"Using shadow ban file '{app.config['SHADOW_BAN_FILE']}'")
+        log(f"Using shadow ban file '{BANNED_FILE}'")
     app.run(debug=app.config['IS_DEBUG'], port=app.config['PORT'])
