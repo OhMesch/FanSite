@@ -15,14 +15,19 @@ from werkzeug.security import check_password_hash
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired
 
+import cups
 from datetime import datetime
 import os
 
 app = Flask(__name__)
 app.config.from_pyfile("flask_config.py")
-LOG_FILE = app.config['LOG_FILE'] or 'server.log'
-UPLOAD_FOLDER = app.config['UPLOAD_FOLDER'] or 'uploads'
-BANNED_FILE = app.config['SHADOW_BAN_FILE'] or 'banned.txt'
+
+CWD = os.getcwd()
+LOG_FILE = os.path.join(CWD, app.config['LOG_FILE'] or 'server.log')
+UPLOAD_FOLDER = os.path.join(CWD, app.config['UPLOAD_FOLDER'] or 'uploads')
+BANNED_FILE = os.path.join(CWD, app.config['SHADOW_BAN_FILE'] or 'banned.txt')
+
+PRINT_UPLOADS = app.config['PRINT_UPLOADS']
 
 class User(UserMixin):
     id = 'fan'
@@ -31,16 +36,17 @@ class User(UserMixin):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-@login.user_loader
-def load_user(id):
-    return User()
-
 class LoginForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Adore Him')
 
 login = LoginManager(app)
 login.login_view = 'login'
+
+@login.user_loader
+def load_user(id):
+    return User()
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -82,6 +88,8 @@ def upload_file():
         filename = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(filename)
         log(f"Accepted file upload request from {request.form['uuid']} for file {filename}.")
+        if PRINT_UPLOADS:
+            sendToPrinter(filename)
         return jsonify({"success": True})  
 
 @app.route('/uploads/<filename>')
@@ -118,6 +126,15 @@ def isBanned(uuid):
             if uuid in line:
                 return True
     return False
+
+def sendToPrinter(file):
+    try:
+        conn = cups.Connection()
+        printer_name = 'HP_ENVY_5000_series_850B68'
+        conn.printFile(printer_name, file, "Eric Site Print", {})
+        log(f"Sent print request for \"{file}\" to \"{printer_name}\".")
+    except Exception as e:
+        log(f"Error in printing: \"{e}\"")
 
 if __name__ == '__main__':
     log("Starting server...")
