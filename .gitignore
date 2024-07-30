@@ -6,3 +6,4 @@ ShadowBanned.txt
 
 env/*
 uploads/*
+__pycache__/main.cpython-39.pyc

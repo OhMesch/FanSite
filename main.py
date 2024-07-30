@@ -17,6 +17,9 @@ from wtforms.validators import DataRequired
 
 import cups
 from datetime import datetime
+from natsort import natsorted
+from PIL import Image
+import time
 import os
 
 app = Flask(__name__)
@@ -86,11 +89,14 @@ def upload_file():
         return jsonify({"error": "No selected file"})
     if file:
         filename = os.path.join(UPLOAD_FOLDER, file.filename)
-        file.save(filename)
+        with Image.open(file) as img:
+            filename = f'{time.time()}_{file.filename}'
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            img.save(filepath, quality=35)
         log(f"Accepted file upload request from {request.form['uuid']} for file {filename}.")
         if PRINT_UPLOADS:
-            sendToPrinter(filename)
-        return jsonify({"success": True})  
+            sendToPrinter(filepath)
+        return jsonify({"success": True, "filename": filename})
 
 @app.route('/uploads/<filename>')
 @login_required
@@ -101,7 +107,7 @@ def uploaded_file(filename):
 @login_required
 def get_images():
     # List all files in the UPLOAD_FOLDER
-    files = [f for f in os.listdir(UPLOAD_FOLDER) if os.path.isfile(os.path.join(UPLOAD_FOLDER, f))]
+    files = natsorted([f for f in os.listdir(UPLOAD_FOLDER) if os.path.isfile(os.path.join(UPLOAD_FOLDER, f))])[::-1]
     return jsonify(files)
 
 @app.route('/log', methods=['POST'])

@@ -16,25 +16,19 @@
         <p>Upload your fav photos here!</p>
     </div>
 
-    <div id="upload-section">
-        <!-- <input type="file" id="fileInput">
-        <button onclick="uploadImage()">Upload</button> -->
-        <!-- <label for="fileInput">
-            <i class="fa-solid fa-upload" style="font-size: xx-large"></i>
-            <input type="file" accept="image/*" oninput="uploadImage()" id="fileInput" style="display: none">
-        </label>
-        <label for="cameraInput">
+    <div id="upload-container">
+        <label for="fileInput" class="upload-label">
             <i class="fa-solid fa-camera" style="font-size: xx-large"></i>
-            <input type="file" accept="image/*" capture="camera" oninput="uploadImage()" id="cameraInput" style="display: none">
-        </label> -->
-        <label for="fileInput">
-            <i class="fa-solid fa-camera" style="font-size: xx-large"></i>
+            <p class="upload-text">Upload Adoration</p>
             <input type="file" accept="image/*" oninput="uploadImage()" id="fileInput" style="display: none">
         </label>
     </div>
 
-    <div id="gallery">
-        <div class="grid-sizer"></div>
+    <div id="gallery-container">
+        <div id="loading-spinner" class="spinner"></div>
+        <div id="gallery">
+            <div class="grid-sizer"></div>
+        </div>
     </div>
 
     <div class="modal" id="imageModal">
@@ -46,7 +40,7 @@
     <style>
         html {
             background-image: url('./static/imgs/background.jpg');
-            background-size: 2%;
+            background-size: 5%;
             background-repeat: repeat;
             overscroll-behavior: none;
         }
@@ -72,21 +66,72 @@
             font-size: 200%;
             color: goldenrod;
             text-align: center;
-            margin: 0 0 5vh 0;
+            margin: 0 0 0 0;
             padding-bottom: 2vh;
         }
-        #upload-section {
+        #upload-container {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin: 0 auto;
+            margin: 3vh auto;
             width: fit-content;
-            padding: 16px;
-            background-color: aqua;
+            background: #FFD700; /* Yellowish background */
+            background: linear-gradient(to bottom, #FFEC64, #FFD700); /* Slight gradient for depth */
+            border: 2px solid #FFC700;
+            border-radius: 5px; /* A touch of rounding, but still quite square */
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2), 2px 2px 5px rgba(0, 0, 0, 0.2); /* Inset shadow for depth, and a regular shadow for lift */
+            color: #333; /* Dark text color for contrast */
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace; /* Pixelated, monospace font */
+            font-size: 16px;
+            padding: 10px 20px;
+            text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.7); /* White text shadow for that retro feel */
+            transition: transform 0.2s; /* Slight press-down effect on click */
+        }
+        .upload-label {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            width: 100%;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .upload-text {
+            margin-left: 15px; /* Space between icon and text */
+            color: #333; /* A slightly dark color for the text */
+            font-size: 1.3em;
+        }
+        #loading-spinner {
+            display: block;
+        }
+        #gallery-container {
+            position: relative;
+            display: block;
+        }
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 30px auto;
+            transform: translate(-50%, -50%); /* Center the spinner */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         #gallery {
             margin: 0 auto;
             text-align: center;
+            display: none;
+            position: relative;
         }
         .grid-sizer,
         .grid-item { 
@@ -166,9 +211,14 @@
                 for (let image of images) {
                     gallery.appendChild(createImgElement(`/uploads/${image}`));
                 }
-                imagesLoaded(gallery).progress( function() {
+                // imagesLoaded(gallery).progress( function() {
+                //     pckry.layout();
+                // });
+                imagesLoaded(gallery, function () {
                     pckry.layout();
-                });
+                    document.querySelector('#loading-spinner').style.display='none';
+                    gallery.style.display='block';
+                })
             });
 
             assignUserCookieIfNone();
@@ -198,7 +248,7 @@
             .then(data => {
                 if(data.success) {
                     const gallery = document.getElementById('gallery');
-                    const upload = createImgElement(`/uploads/${file.name}`);
+                    const upload = createImgElement(`/uploads/${data.filename}`);
                     const fragment = document.createDocumentFragment();
                     fragment.appendChild(upload);
                     gallery.insertBefore(fragment, gallery.firstElementChild.nextSibling);
@@ -224,11 +274,13 @@
             let modalWrapper = document.getElementById("imageModal");
             let modalImage = document.getElementById("modalImage");
             let modalCaption = document.getElementById("caption");
+            
             img.onclick = function () {
                 document.body.classList.add('no-scroll');
                 modalWrapper.style.display = "block";
                 modalImage.src = this.src;
                 modalCaption.innerHTML = this.alt;
+                history.pushState({ imageOpened: true }, "");
             }
 
             var span = document.getElementsByClassName("close")[0];
@@ -245,7 +297,14 @@
         function closeModal() {
             document.getElementById("imageModal").style.display = "none";
             document.body.classList.remove('no-scroll');
+            history.replaceState({}, "");
         }
+
+        window.addEventListener("popstate", function(event) {
+            if (event.state && event.state.imageOpened) {
+                closeModal();
+            }
+        });
 
         function log(logMessage) {
             let formData = new FormData();
